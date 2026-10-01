@@ -1,0 +1,23 @@
+# Render blueprint for the API. The database is Neon (set DATABASE_URL by hand); the web app is on Vercel.
+services:
+  - type: web
+    name: bazario-api
+    runtime: docker
+    rootDir: api
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: MOCK_WEBHOOK_SECRET
+        generateValue: true
+      - key: WEB_ORIGINS
+        sync: false # e.g. https://bazario.vercel.app
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: PAYMENT_PROVIDER
+        value: mock
