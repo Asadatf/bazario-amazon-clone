@@ -1,0 +1,14 @@
+{
+  "name": "bazario",
+  "private": true,
+  "description": "Bazario: an Amazon.com-style store (take-home). Modular NestJS API + Next.js web.",
+  "scripts": {
+    "setup": "docker compose up -d --wait && npm --prefix api install && npm --prefix web install && cp -n api/.env.example api/.env; cp -n web/.env.example web/.env.local; npm --prefix api run db:migrate && npm --prefix api run db:seed",
+    "dev": "concurrently -n api,web -c blue,green \"npm --prefix api run start:dev\" \"npm --prefix web run dev\"",
+    "test": "npm --prefix api test",
+    "lint": "npm --prefix api run typecheck && npm --prefix web run typecheck"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
