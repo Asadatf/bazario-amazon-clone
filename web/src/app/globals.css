@@ -1,0 +1,34 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-nav: #131921;
+  --color-nav-light: #232f3e;
+  --color-nav-hover: #37475a;
+  --color-page: #eaeded;
+  --color-brand: #febd69;
+  --color-brand-dark: #f3a847;
+  --color-cart-btn: #ffd814;
+  --color-cart-btn-hover: #f7ca00;
+  --color-buy-btn: #ffa41c;
+  --color-buy-btn-hover: #fa8900;
+  --color-link: #007185;
+  --color-link-hover: #c7511f;
+  --color-price: #0f1111;
+  --color-deal: #cc0c39;
+  --color-instock: #007600;
+  --color-star: #ffa41c;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+body {
+  background: var(--color-page);
+  color: #0f1111;
+}
+
+.link {
+  color: var(--color-link);
+}
+.link:hover {
+  color: var(--color-link-hover);
+  text-decoration: underline;
+}
