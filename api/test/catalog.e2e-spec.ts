@@ -95,6 +95,15 @@ describe('Catalog + search (e2e)', () => {
       expect(none.body).toEqual({ items: [], nextCursor: null });
     });
 
+    it('finds substrings and tolerates typos in titles (trigram fallback)', async () => {
+      const substring = await api().get('/api/v1/products?q=aptop').expect(200);
+      expect(substring.body.items.length).toBeGreaterThan(0);
+      const typo = await api().get('/api/v1/products?q=budgt').expect(200);
+      expect(typo.body.items.map((p: { title: string }) => p.title)).toContain('Budget Laptop');
+      const literal = await api().get('/api/v1/products?q=%25').expect(200);
+      expect(literal.body.items).toHaveLength(0);
+    });
+
     it('filters by parent category (including sub-categories) and price range in cents', async () => {
       const cat = await api().get('/api/v1/products?category=electronics').expect(200);
       expect(cat.body.items).toHaveLength(3);

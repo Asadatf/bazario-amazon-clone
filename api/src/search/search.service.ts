@@ -52,7 +52,7 @@ export class SearchService {
     const effectiveSort: Sort = sort === 'relevance' && !query.q ? 'rating' : sort;
 
     const conditions: Prisma.Sql[] = [];
-    if (query.q) conditions.push(Prisma.sql`p.search_vector @@ websearch_to_tsquery('english', ${query.q})`);
+    if (query.q) conditions.push(textMatch(query.q));
     if (query.category) {
       const ids = await this.catalog.resolveCategoryIds(query.category);
       if (!ids.length) return { items: [], nextCursor: null };
@@ -88,8 +88,23 @@ export class SearchService {
   }
 }
 
+/** Word match (stemmed full-text) OR title substring OR fuzzy title match (typos). */
+function textMatch(q: string): Prisma.Sql {
+  return Prisma.sql`(
+    p.search_vector @@ websearch_to_tsquery('english', ${q})
+    OR p.title ILIKE ${`%${escapeLike(q)}%`}
+    OR ${q} <% p.title
+  )`;
+}
+
+/** Full-text rank dominates; trigram similarity lifts substring/typo matches that FTS scores at 0. */
 function relevanceKey(q: string): Prisma.Sql {
-  return Prisma.sql`ts_rank(p.search_vector, websearch_to_tsquery('english', ${q}))::float8`;
+  return Prisma.sql`(ts_rank(p.search_vector, websearch_to_tsquery('english', ${q})) + 0.5 * word_similarity(${q}, p.title))::float8`;
+}
+
+/** The user's text is a bound parameter (no injection), but % and _ would still act as LIKE wildcards. */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (c) => `\\${c}`);
 }
 
 /** Dates and numerics must round-trip exactly, or the keyset comparison would skip/repeat rows. */
