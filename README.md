@@ -16,8 +16,10 @@ It uses an original name and logo ("bazario." with its own arc), not Amazon's br
 | API docs (Swagger) | https://bazario-amazon-clone.onrender.com/docs |
 | Repository | https://github.com/Asadatf/bazario-amazon-clone |
 
-Hosting: web on **Vercel**, API on **Render** (Docker, free tier), Postgres 16 on **Neon** (Oregon, same region as the API). The site proxies `/api/v1/*` to the API, so the refresh cookie is first-party.
+Hosting: web on **Vercel**, API on **Render** (Docker, free tier), Postgres 16 on **Neon** (Oregon, same region as the API), payments on **Stripe** (test mode; the order becomes PAID only via Stripe's signed webhook). The site proxies `/api/v1/*` to the API, so the refresh cookie is first-party.
 The free API instance sleeps when idle: the **first request after a quiet period can take about 50s**, then it's fast.
+
+**Payments are real Stripe in test mode**: no money moves. At checkout use card **`4242 4242 4242 4242`**, any future expiry, any CVC and ZIP (**`4000 0000 0000 0002`** shows a decline).
 
 Demo logins (password `Password123!`): `customer@bazario.dev`, `seller1@bazario.dev`, `seller2@bazario.dev`, `admin@bazario.dev`. The login page has one-click buttons for these.
 
