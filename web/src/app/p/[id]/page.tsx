@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Price } from '@/components/price';
+import { ProductImage } from '@/components/product-image';
 import { Stars } from '@/components/stars';
 import { Button } from '@/components/ui/button';
 import { Alert, Skeleton } from '@/components/ui/card';
-import { errorMessage } from '@/lib/api';
+import { ApiError, errorMessage } from '@/lib/api';
 import { useAddToCart, useCategories, useProduct } from '@/lib/queries';
 
 export default function ProductPage() {
@@ -29,7 +30,17 @@ export default function ProductPage() {
       </div>
     );
   }
-  if (error || !product) return <div className="mx-auto max-w-3xl p-10"><Alert>{error ? errorMessage(error) : 'Product not found'}</Alert></div>;
+  if (error || !product) {
+    // 400 (malformed id) and 404 both mean "this link doesn't lead to a product": say so in plain words.
+    const notFound = !error || (error instanceof ApiError && (error.status === 404 || error.status === 400));
+    return (
+      <div className="mx-auto max-w-xl bg-white p-10 text-center">
+        <h1 className="text-2xl font-bold">{notFound ? 'This product isn\u2019t available' : 'Something went wrong'}</h1>
+        <p className="mt-2 text-sm text-gray-600">{notFound ? 'It may have been removed, or the link is incorrect.' : errorMessage(error)}</p>
+        <Link href="/s" className="link mt-4 inline-block">Continue shopping</Link>
+      </div>
+    );
+  }
 
   const parent = categories?.find((c) => c.children.some((ch) => ch.id === product.categoryId) || c.id === product.categoryId);
   const sub = parent?.children.find((ch) => ch.id === product.categoryId);
@@ -50,8 +61,8 @@ export default function ProductPage() {
         {sub && <> › <Link className="hover:underline" href={`/s?category=${sub.slug}`}>{sub.name}</Link></>}
       </div>
       <div className="mx-auto grid max-w-6xl gap-8 px-4 pb-10 md:grid-cols-[2fr_3fr_1.4fr]">
-        <div className="flex items-start justify-center">
-          <img src={product.imageUrl} alt={product.title} className="max-h-[480px] w-full object-contain" />
+        <div className="h-[320px] sm:h-[420px]">
+          <ProductImage src={product.imageUrl} alt={product.title} sizes="(max-width: 768px) 100vw, 40vw" priority />
         </div>
 
         <div>

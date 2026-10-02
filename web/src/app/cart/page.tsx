@@ -7,6 +7,7 @@ import { Alert, Card } from '@/components/ui/card';
 import { errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { formatCents } from '@/lib/money';
+import { plural } from '@/lib/plural';
 import { useCart, useRemoveCartItem, useUpdateCartItem } from '@/lib/queries';
 
 export default function CartPage() {
@@ -39,12 +40,12 @@ export default function CartPage() {
           <ul>
             {items.map((item) => (
               <li key={item.productId} className="flex gap-4 border-b py-4">
-                <Link href={`/p/${item.productId}`} className="flex h-44 w-44 shrink-0 items-center justify-center">
+                <Link href={`/p/${item.productId}`} className="flex h-24 w-24 shrink-0 items-center justify-center sm:h-44 sm:w-44">
                   <img src={item.imageUrl} alt={item.title} className="max-h-full max-w-full object-contain" />
                 </Link>
-                <div className="flex-1">
-                  <div className="flex justify-between gap-4">
-                    <Link href={`/p/${item.productId}`} className="text-lg leading-snug hover:text-link-hover">{item.title}</Link>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:justify-between sm:gap-4">
+                    <Link href={`/p/${item.productId}`} className="leading-snug hover:text-link-hover sm:text-lg">{item.title}</Link>
                     <Price cents={item.lineTotalCents} size="sm" className="font-bold" />
                   </div>
                   <p className={`text-xs ${item.stock >= item.quantity ? 'text-instock' : 'text-deal'}`}>
@@ -73,7 +74,7 @@ export default function CartPage() {
         )}
         {items.length > 0 && (
           <p className="pt-2 text-right text-lg">
-            Subtotal ({cart?.itemCount} items): <b>{formatCents(cart?.subtotalCents ?? 0)}</b>
+            Subtotal ({plural(cart?.itemCount ?? 0, 'item')}): <b>{formatCents(cart?.subtotalCents ?? 0)}</b>
           </p>
         )}
       </Card>
@@ -82,7 +83,7 @@ export default function CartPage() {
         <Card className="h-fit lg:w-80">
           <p className="text-sm text-instock">Your order qualifies for FREE Shipping.</p>
           <p className="mt-2 text-lg">
-            Subtotal ({cart?.itemCount} items): <b>{formatCents(cart?.subtotalCents ?? 0)}</b>
+            Subtotal ({plural(cart?.itemCount ?? 0, 'item')}): <b>{formatCents(cart?.subtotalCents ?? 0)}</b>
           </p>
           <Button asChild size="full" className="mt-4"><Link href="/checkout">Proceed to checkout</Link></Button>
           {status === 'anonymous' && <p className="mt-2 text-center text-xs text-gray-600">You&apos;ll sign in or create an account next.</p>}

@@ -6,6 +6,7 @@ import { FormEvent, KeyboardEvent, useEffect, useId, useState } from 'react';
 import { formatCents } from '@/lib/money';
 import { useCategories, useSuggestions } from '@/lib/queries';
 import { useDebounced } from '@/lib/use-debounced';
+import { useHydrated } from '@/lib/use-hydrated';
 import { cn } from '@/lib/utils';
 
 /** Bolds the part of a title that matches what was typed (case-insensitive substring). */
@@ -28,7 +29,10 @@ function Highlight({ text, query }: { text: string; query: string }) {
 export function SearchBox() {
   const router = useRouter();
   const params = useSearchParams();
-  const { data: categories } = useCategories();
+  const hydrated = useHydrated();
+  // Data that can arrive before this Suspense-wrapped header hydrates must not change the first render.
+  const { data: loadedCategories } = useCategories();
+  const categories = hydrated ? loadedCategories : undefined;
   const [q, setQ] = useState(params.get('q') ?? '');
   const [category, setCategory] = useState(params.get('category') ?? '');
   const [open, setOpen] = useState(false);

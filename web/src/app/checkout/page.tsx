@@ -10,6 +10,7 @@ import { Alert, Card } from '@/components/ui/card';
 import { Input, Label } from '@/components/ui/input';
 import { api, errorMessage } from '@/lib/api';
 import { formatCents } from '@/lib/money';
+import { plural } from '@/lib/plural';
 import { useAddresses, useCart } from '@/lib/queries';
 import type { Address, Order, PaymentInfo } from '@/lib/types';
 
@@ -71,7 +72,7 @@ function Checkout() {
   return (
     <form onSubmit={placeOrder} className="mx-auto flex max-w-6xl flex-col gap-5 p-5 lg:flex-row">
       <div className="flex-1 space-y-5">
-        <h1 className="text-[28px]">Checkout ({cart?.itemCount ?? 0} items)</h1>
+        <h1 className="text-[28px]">Checkout ({plural(cart?.itemCount ?? 0, 'item')})</h1>
         {error && <Alert>{error}</Alert>}
         <Card>
           <h2 className="mb-3 text-lg font-bold">1. Shipping address</h2>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useCart, useCategories } from '@/lib/queries';
+import { plural } from '@/lib/plural';
 import { useHydrated } from '@/lib/use-hydrated';
 import { Logo } from './logo';
 import { SearchBox } from './search-box';
@@ -17,19 +18,23 @@ export function Header() {
   const { logout } = auth;
   const { data: liveCart } = useCart();
   const cart = hydrated ? liveCart : undefined;
-  const { data: categories } = useCategories();
+  const { data: loadedCategories } = useCategories();
+  const categories = hydrated ? loadedCategories : undefined;
   const router = useRouter();
 
   const firstName = user?.name.split(' ')[0];
 
   return (
     <header className="sticky top-0 z-40">
-      <div className="flex h-[60px] items-center gap-2 bg-nav px-2 text-white">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 bg-nav px-2 py-1.5 text-white md:h-[60px] md:flex-nowrap md:py-0">
         <Logo />
 
-        <SearchBox />
+        {/* On phones the search gets its own full-width row, so the cart and account stay on screen. */}
+        <div className="order-last flex w-full md:order-none md:w-auto md:flex-1">
+          <SearchBox />
+        </div>
 
-        <div className="group relative">
+        <div className="group relative ml-auto md:ml-0">
           <Link
             href={user ? '/orders' : '/login'}
             className="block rounded border border-transparent px-2 py-1 leading-tight hover:border-white"
@@ -61,7 +66,7 @@ export function Header() {
           <div className="text-sm font-bold">&amp; Orders</div>
         </Link>
 
-        <Link href="/cart" className="flex items-end rounded border border-transparent px-2 py-1 hover:border-white" aria-label={`Cart, ${cart?.itemCount ?? 0} items`}>
+        <Link href="/cart" className="flex items-end rounded border border-transparent px-2 py-1 hover:border-white" aria-label={`Cart, ${plural(cart?.itemCount ?? 0, 'item')}`}>
           <div className="relative">
             <ShoppingCart className="h-8 w-8" />
             <span className="absolute -top-1.5 -right-1.5 min-w-5 rounded-full bg-brand px-1 text-center text-xs leading-5 font-bold text-nav">{cart?.itemCount ?? 0}</span>

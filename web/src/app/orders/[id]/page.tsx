@@ -32,7 +32,7 @@ function OrderDetail() {
           <CheckCircle2 className="mt-0.5 h-6 w-6 text-instock" />
           <div>
             <h1 className="text-lg font-bold text-instock">Order placed, thank you!</h1>
-            <p className="text-sm">Confirmation will be sent to your email. Shipping to {a.fullName}, {a.city}.</p>
+            <p className="text-sm">Payment received. Shipping to {a.fullName}, {a.city}. You can track this order from Your Orders.</p>
           </div>
         </Card>
       )}
@@ -41,7 +41,7 @@ function OrderDetail() {
           <XCircle className="mt-0.5 h-6 w-6 text-deal" />
           <div>
             <h1 className="text-lg font-bold text-deal">Payment declined</h1>
-            <p className="text-sm">Your order was cancelled and nothing was charged. Use &quot;Buy all again&quot; below to put these items back in your cart.</p>
+            <p className="text-sm">Your order was cancelled and nothing was charged. Use the button below to put {order.items.length > 1 ? 'these items' : 'this item'} back in your cart and try again.</p>
           </div>
         </Card>
       )}

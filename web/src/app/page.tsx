@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ProductCard, ProductGridSkeleton } from '@/components/product-card';
+import { ProductImage } from '@/components/product-image';
 import { useCategories, useProducts } from '@/lib/queries';
 import type { CategoryNode } from '@/lib/types';
 
@@ -12,17 +13,17 @@ export default function HomePage() {
 
   return (
     <div className="relative mx-auto max-w-[1500px]">
-      <div className="h-[260px] bg-gradient-to-b from-[#3b7fa8] via-[#86b9d6] to-page sm:h-[320px]">
-        <div className="mx-auto max-w-5xl px-6 pt-10 text-white sm:pt-14">
+      <div className="bg-gradient-to-b from-[#3b7fa8] via-[#86b9d6] to-page pb-10 sm:h-[320px] sm:pb-0">
+        <div className="mx-auto max-w-5xl px-6 pt-6 text-white sm:pt-14">
           <p className="text-sm font-semibold tracking-wide uppercase opacity-90">No sponsored results. No fake timers.</p>
-          <h1 className="mt-1 text-3xl font-extrabold drop-shadow sm:text-5xl">Find it fast, see the real price, check out on one page.</h1>
+          <h1 className="mt-1 text-2xl font-extrabold drop-shadow sm:text-5xl">Find it fast, see the real price, check out on one page.</h1>
           <Link href="/s?sort=rating" className="mt-4 inline-block rounded-full bg-cart-btn px-5 py-2 text-sm font-medium text-black hover:bg-cart-btn-hover">
             Shop top rated
           </Link>
         </div>
       </div>
 
-      <div className="relative z-10 -mt-24 grid grid-cols-1 gap-5 px-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="relative z-10 grid grid-cols-1 gap-5 px-4 sm:-mt-24 sm:grid-cols-2 lg:grid-cols-4">
         {categories?.slice(0, 8).map((c) => <CategoryTile key={c.slug} category={c} />)}
       </div>
 
@@ -50,7 +51,7 @@ function CategoryTile({ category }: { category: CategoryNode }) {
         {products.map((p) => (
           <Link key={p.id} href={`/p/${p.id}`} className="group">
             <div className="flex aspect-square items-center justify-center bg-[#f7f7f7]">
-              <img src={p.imageUrl} alt="" loading="lazy" className="max-h-full max-w-full object-contain mix-blend-multiply" />
+              <ProductImage src={p.imageUrl} alt="" sizes="(max-width: 640px) 45vw, 12vw" className="mix-blend-multiply" />
             </div>
             <p className="mt-1 line-clamp-1 text-xs group-hover:text-link-hover">{p.title}</p>
           </Link>

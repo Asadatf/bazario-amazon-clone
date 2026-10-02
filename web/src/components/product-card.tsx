@@ -1,14 +1,14 @@
 import Link from 'next/link';
 import type { ProductListItem } from '@/lib/types';
 import { Price } from './price';
+import { ProductImage } from './product-image';
 import { Stars } from './stars';
 
 export function ProductCard({ product }: { product: ProductListItem }) {
   return (
     <Link href={`/p/${product.id}`} className="group flex flex-col bg-white p-3 transition hover:shadow-md">
       <div className="flex aspect-square items-center justify-center bg-[#f7f7f7]">
-        {/* Plain <img>: sellers can use any image host, which next/image would need allow-listed. */}
-        <img src={product.imageUrl} alt={product.title} loading="lazy" className="max-h-full max-w-full object-contain mix-blend-multiply" />
+        <ProductImage src={product.imageUrl} alt={product.title} sizes="(max-width: 768px) 50vw, 25vw" className="mix-blend-multiply" />
       </div>
       <h3 className="mt-2 line-clamp-2 text-[15px] leading-snug group-hover:text-link-hover">{product.title}</h3>
       <Stars rating={product.ratingAvg} count={product.ratingCount} size={14} />

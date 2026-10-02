@@ -13,7 +13,8 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body id="top" className="flex min-h-screen flex-col antialiased">
+      {/* suppressHydrationWarning: browser extensions (e.g. Grammarly) add attributes to <body> before React loads. */}
+      <body id="top" className="flex min-h-screen flex-col antialiased" suppressHydrationWarning>
         <Providers>
           <Suspense fallback={<div className="h-[100px] bg-nav" />}>
             <Header />
