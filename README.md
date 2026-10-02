@@ -5,7 +5,7 @@ It uses an original name and logo ("bazario." with its own arc), not Amazon's br
 
 - **API:** NestJS modular monolith + PostgreSQL 16 (Prisma), JWT auth with rotating refresh tokens, Swagger at `/docs`
 - **Web:** Next.js App Router + Tailwind + shadcn/ui-style components + TanStack Query, laid out like Amazon
-- **Tests:** 44 Jest + Supertest tests against a real Postgres, including the concurrent last-unit checkout
+- **Tests:** 48 Jest + Supertest tests against a real Postgres, including the concurrent last-unit checkout
 
 ## Live links
 
@@ -35,6 +35,28 @@ npm --prefix api run db:reset   # wipe + re-migrate + re-seed
 ```
 
 Postgres runs on host port **5433** so it doesn't collide with a locally installed Postgres.
+
+## Product decisions: what I changed, cut and kept
+
+I used amazon.com as a reference, not a blueprint. The goal was the shortest honest path from "I want X" to "it's ordered".
+
+**Changed or added**
+| Decision | Amazon today | Bazario | Why |
+|---|---|---|---|
+| Guest cart | Has a guest cart | Add to cart without an account; the cart lives in the browser, is **priced by the server**, and merges into your account when you sign in at checkout (quantities clamped to stock) | A sign-in wall before "add to cart" is the biggest drop-off in a store. Merging means signing in never empties the cart. |
+| Search as you type | Query suggestions (text only) | Product suggestions with image and price, **typo tolerant** ("iphne" finds iPhone), full keyboard support (arrows, Enter, Esc) | Most searches are for a specific product, so jump straight to it. Suggestions use the same ranking as the results page, so they never disagree. |
+| Buy again | Buried on a separate page | "Buy it again" on every past item and "Buy all again" per order, right in order history; unavailable items are named, not silently dropped | Re-ordering is the most common repeat action. It also makes a declined payment a one-click retry. |
+| One-page checkout | Several steps and interstitials | Address, payment and review on one page; one "Place your order" | Fewer steps. The server re-checks stock and prices on submit anyway, so extra review steps add no safety. |
+| Price shown is price paid | Fees and shipping often appear late | Free shipping shown on the product page, no fees added at checkout | No surprise at the last step. |
+
+**Cut on purpose**
+- **Fake urgency:** the "Order within 4 hrs 12 mins" countdown and "order soon" nudges. "Only N left" stays because it's real stock data.
+- **The hard-coded "Deliver to <city>" widget:** it showed one fixed location to everyone, which is decoration pretending to be information.
+- **Sponsored results, Prime upsells, ads:** ranking is relevance, rating, price or newest, nothing paid.
+- **Dead links:** Amazon's footer has dozens of corporate links. Ours links only to pages that exist.
+- **Reviews UI, wishlists, recommendations, variants:** valuable but not core to "find → buy → track". The reviews table is ready for later.
+
+**Kept from Amazon** because it works: the dense header (search front and centre, account and cart top right), category tiles on home, the price-first buy box with a clear stock line, and order history grouped per order.
 
 ## Architecture
 
@@ -134,17 +156,17 @@ PASS test/catalog.e2e-spec.ts    seller tenancy (403 other seller, 401 anon, 403
 PASS test/auth.e2e-spec.ts       register/login, argon2 + hashed refresh storage, rotation, reuse → family revoked,
                                  concurrent refresh race, logout, uniform 401s, role can't be self-assigned
 PASS src/common/pagination/cursor.spec.ts
-Tests: 44 passed
+Tests: 48 passed
 ```
 
 ## Done vs out of scope
 
-**Done:** everything in the plan's phases 1–7, including seller pages; Stripe provider at API level; admin fulfilment transitions; trigram search fallback; Dockerfile and Render blueprint.
+**Done:** everything in the plan's phases 1–7, including seller pages; guest cart with merge on sign-in; typo-tolerant search suggestions; buy again; Stripe provider at API level; admin fulfilment transitions; trigram search fallback; Dockerfile and Render blueprint.
 
 **Out of scope / cut (per the plan's cut order):**
 - Reviews: table and constraint exist, no endpoints/UI (ratings are seeded).
 - Stripe in the UI: no Stripe Elements; the demo checkout uses the mock provider. The Stripe adapter handles PaymentIntents and verified webhooks.
-- Guest cart (you sign in to add to cart), wishlists, recommendations, product variants, image upload, emails.
+- Wishlists, recommendations, product variants, image upload, emails.
 - No sweeper yet for abandoned `PENDING_PAYMENT` orders (they'd be expired by the provider's webhook).
 - Not deployed from this environment: no hosting credentials. Steps are below.
 

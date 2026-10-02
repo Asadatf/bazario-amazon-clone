@@ -134,3 +134,28 @@ Each entry: **Decision**, **Why**, **Alternatives rejected**, **How I'd change i
 
 - **Decision:** `@nestjs/throttler`: 300 req/min/IP by default; `AUTH_THROTTLE_LIMIT` (default 5/min) on login/register; webhooks and health exempt. `trust proxy` is set so the real client IP is used behind Render's proxy.
 - **At scale:** The in-memory store is per instance; use Redis storage so limits hold across replicas, and add per-account login lockout.
+
+## 21. Guest cart: browser-held lines, server-priced, merged on sign-in
+
+- **Decision:** Signed-out shoppers keep `{productId, quantity}` in localStorage, never prices. `POST /cart/quote` (public) prices them with the same code as a real cart. `POST /cart/merge` folds them into the account on sign-in, clamping to stock and skipping sold-out items. The client awaits the merge before redirecting to checkout.
+- **Why:** Removes the sign-in wall before "add to cart" while keeping rule 2 (prices only from the DB). Clamping instead of failing means one sold-out item can't wipe the shopper's cart.
+- **Alternatives rejected:** Anonymous server-side carts keyed by a cookie (more state on a stateless API, plus cleanup jobs for abandoned carts). Requiring sign-in (the previous behaviour; the worst UX gap compared with Amazon).
+- **At scale:** A server-side anonymous cart keyed by a signed cookie, so it follows the shopper across devices after sign-in, with a TTL in Redis.
+
+## 22. Search suggestions reuse the search query; trigram threshold 0.5
+
+- **Decision:** `GET /search/suggestions?q=` calls the same `search()` with `sort=relevance, limit=6` and returns only id, title, image and price. Debounced 150ms on the client, `Cache-Control: public, max-age=60`. The `pg_trgm.word_similarity_threshold` is set to 0.5 per database (migration) instead of the default 0.6.
+- **Why:** One ranking function means suggestions and results never disagree. 0.6 missed the most common typo (one dropped letter in a short word: "iphne" scores 0.5). Setting it per database keeps the `<%` operator, so the trigram index is still used.
+- **Path:** not `/products/suggest`, because that collides with `/products/:id`.
+- **At scale:** A dedicated prefix index (edge n-grams in OpenSearch) and query-log-based "popular searches".
+
+## 23. Buy again is client-side over the existing cart API
+
+- **Decision:** "Buy it again" and "Buy all again" re-add order lines through `POST /cart/items` and report unavailable items by name.
+- **Why:** No new endpoint needed. Each add still goes through stock checks, and quantities are capped.
+- **At scale:** A server endpoint that re-adds a whole order in one transaction and returns a per-line result.
+
+## 24. Cutting dark patterns and decoration
+
+- **Decision:** Removed the countdown timer, "order soon" copy, the hard-coded "Deliver to" location, false "delivery tomorrow" promises, and dead footer links. Kept "Only N left", because it's true.
+- **Why:** In a store, trust is part of the UX. Every claim on the page should be backed by data the system actually has.

@@ -5,6 +5,7 @@ services:
     runtime: docker
     rootDir: api
     plan: free
+    region: oregon # same region as the Neon database (aws-us-west-2)
     healthCheckPath: /api/v1/health
     envVars:
       - key: NODE_ENV
@@ -16,7 +17,8 @@ services:
       - key: MOCK_WEBHOOK_SECRET
         generateValue: true
       - key: WEB_ORIGINS
-        sync: false # e.g. https://bazario.vercel.app
+        # Only matters for direct cross-origin calls; the Vercel app proxies /api/v1 so the browser stays same-origin.
+        value: https://bazario-amazon-clone.vercel.app
       - key: COOKIE_SECURE
         value: "true"
       - key: PAYMENT_PROVIDER
