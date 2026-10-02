@@ -11,9 +11,13 @@ It uses an original name and logo ("bazario." with its own arc), not Amazon's br
 
 | | URL |
 |---|---|
-| Web (Vercel) | _not deployed yet: see [Deploying](#deploying)_ |
-| API (Render) | _not deployed yet_ |
-| API docs | `<api-url>/docs` |
+| **Live site** (Vercel) | **https://bazario-amazon-clone.vercel.app** |
+| API (Render) | https://bazario-amazon-clone.onrender.com/api/v1/health |
+| API docs (Swagger) | https://bazario-amazon-clone.onrender.com/docs |
+| Repository | https://github.com/Asadatf/bazario-amazon-clone |
+
+Hosting: web on **Vercel**, API on **Render** (Docker, free tier), Postgres 16 on **Neon** (Oregon, same region as the API). The site proxies `/api/v1/*` to the API, so the refresh cookie is first-party.
+The free API instance sleeps when idle: the **first request after a quiet period can take about 50s**, then it's fast.
 
 Demo logins (password `Password123!`): `customer@bazario.dev`, `seller1@bazario.dev`, `seller2@bazario.dev`, `admin@bazario.dev`. The login page has one-click buttons for these.
 
@@ -168,13 +172,12 @@ Tests: 48 passed
 - Stripe in the UI: no Stripe Elements; the demo checkout uses the mock provider. The Stripe adapter handles PaymentIntents and verified webhooks.
 - Wishlists, recommendations, product variants, image upload, emails.
 - No sweeper yet for abandoned `PENDING_PAYMENT` orders (they'd be expired by the provider's webhook).
-- Not deployed from this environment: no hosting credentials. Steps are below.
 
-## Deploying
+## Deploying (how the live links above were set up)
 
 1. **DB (Neon):** create a database and copy its connection string (use the pooled URL with `?sslmode=require`).
-2. **API (Render):** "New → Blueprint" on this repo (`render.yaml`, Docker, root `api/`). Set `DATABASE_URL` and `WEB_ORIGINS=https://<your-vercel-app>`. Migrations run on boot. Seed once: `DATABASE_URL=... ALLOW_SEED=true NODE_ENV=production npm --prefix api run db:seed`.
-3. **Web (Vercel):** import the repo with root directory `web/`. Set `NEXT_PUBLIC_API_URL=https://<render-api>`. Alternatively set `NEXT_PUBLIC_API_URL=` (empty) and `API_PROXY_TARGET=https://<render-api>` so the refresh cookie is first-party.
+2. **API (Render):** New Web Service → this repo, **Docker**, root directory `api`, free instance, health check `/api/v1/health`. Env vars as in `render.yaml` (`DATABASE_URL`, `JWT_ACCESS_SECRET`, `MOCK_WEBHOOK_SECRET`, `COOKIE_SECURE=true`, `NODE_ENV=production`, `PAYMENT_PROVIDER=mock`, `WEB_ORIGINS`). Migrations run on boot. Seed once from a laptop: `DATABASE_URL=... ALLOW_SEED=true NODE_ENV=production npm --prefix api run db:seed`. (Render's Blueprint flow also works, but asks for a card.)
+3. **Web (Vercel):** import the repo with root directory `web`, and set only `API_PROXY_TARGET=https://<render-api>`. Leaving `NEXT_PUBLIC_API_URL` unset makes the browser call `/api/v1` on the same origin, and Next rewrites it to the API.
 
 ## What I'd do in production
 
