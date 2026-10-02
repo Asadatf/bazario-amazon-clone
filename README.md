@@ -42,7 +42,7 @@ Postgres runs on host port **5433** so it doesn't collide with a locally install
 
 ## Product decisions: what I changed, cut and kept
 
-I used amazon.com as a reference, not a blueprint. The goal was the shortest honest path from "I want X" to "it's ordered".
+I used amazon.com as a reference, not a blueprint ([recon screenshots and notes](recon/README.md)). The goal was the shortest honest path from "I want X" to "it's ordered".
 
 **Changed or added**
 | Decision | Amazon today | Bazario | Why |
@@ -50,7 +50,7 @@ I used amazon.com as a reference, not a blueprint. The goal was the shortest hon
 | Guest cart | Has a guest cart | Add to cart without an account; the cart lives in the browser, is **priced by the server**, and merges into your account when you sign in at checkout (quantities clamped to stock) | A sign-in wall before "add to cart" is the biggest drop-off in a store. Merging means signing in never empties the cart. |
 | Search as you type | Query suggestions (text only) | Product suggestions with image and price, **typo tolerant** ("iphne" finds iPhone), full keyboard support (arrows, Enter, Esc) | Most searches are for a specific product, so jump straight to it. Suggestions use the same ranking as the results page, so they never disagree. |
 | Buy again | Buried on a separate page | "Buy it again" on every past item and "Buy all again" per order, right in order history; unavailable items are named, not silently dropped | Re-ordering is the most common repeat action. It also makes a declined payment a one-click retry. |
-| One-page checkout | Several steps and interstitials | Address, payment and review on one page; one "Place your order" | Fewer steps. The server re-checks stock and prices on submit anyway, so extra review steps add no safety. |
+| Checkout | One page, but three **gated** sections (address, then payment, then review); shipping and tax show "--" until an address is entered ([screenshot](recon/12-checkout-gated-sections.jpg)) | All fields open on one page, full total visible from the start, one "Place your order" | The total is never a mystery. The server re-checks stock and prices on submit anyway, so gating the steps adds no safety. |
 | Price shown is price paid | Fees and shipping often appear late | Free shipping shown on the product page, no fees added at checkout | No surprise at the last step. |
 
 **Cut on purpose**
