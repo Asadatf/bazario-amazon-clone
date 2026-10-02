@@ -5,6 +5,10 @@ const booleanString = z
   .default('false')
   .transform((v) => v === 'true');
 
+/** `KEY=` with nothing after it (as in .env.example) means "not set", not "set to an empty string". */
+const optionalPrefixed = (prefix: string) =>
+  z.preprocess((v) => (v === '' ? undefined : v), z.string().startsWith(prefix).optional());
+
 const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
@@ -21,12 +25,15 @@ const envSchema = z
     AUTH_THROTTLE_LIMIT: z.coerce.number().int().positive().default(5),
     PAYMENT_PROVIDER: z.enum(['mock', 'stripe']).default('mock'),
     MOCK_WEBHOOK_SECRET: z.string().min(16),
-    STRIPE_SECRET_KEY: z.string().optional(),
-    STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    STRIPE_SECRET_KEY: optionalPrefixed('sk_'),
+    STRIPE_WEBHOOK_SECRET: optionalPrefixed('whsec_'),
+    // Public by design (it goes to the browser), but kept in server env so only Render needs configuring.
+    STRIPE_PUBLISHABLE_KEY: optionalPrefixed('pk_'),
   })
-  .refine((e) => e.PAYMENT_PROVIDER !== 'stripe' || (e.STRIPE_SECRET_KEY && e.STRIPE_WEBHOOK_SECRET), {
-    message: 'STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET are required when PAYMENT_PROVIDER=stripe',
-  });
+  .refine(
+    (e) => e.PAYMENT_PROVIDER !== 'stripe' || (e.STRIPE_SECRET_KEY && e.STRIPE_WEBHOOK_SECRET && e.STRIPE_PUBLISHABLE_KEY),
+    { message: 'STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET and STRIPE_PUBLISHABLE_KEY are required when PAYMENT_PROVIDER=stripe' },
+  );
 
 export type Env = z.infer<typeof envSchema>;
 

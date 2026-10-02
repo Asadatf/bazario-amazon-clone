@@ -11,7 +11,8 @@ import { Input, Label } from '@/components/ui/input';
 import { api, errorMessage } from '@/lib/api';
 import { formatCents } from '@/lib/money';
 import { plural } from '@/lib/plural';
-import { useAddresses, useCart } from '@/lib/queries';
+import { StripePayment } from '@/components/stripe-payment';
+import { useAddresses, useCart, usePaymentConfig } from '@/lib/queries';
 import type { Address, Order, PaymentInfo } from '@/lib/types';
 
 const EMPTY_ADDRESS: Address = { fullName: '', line1: '', city: '', postalCode: '', country: 'US' };
@@ -21,6 +22,10 @@ function Checkout() {
   const queryClient = useQueryClient();
   const { data: cart } = useCart();
   const { data: addresses } = useAddresses();
+  const { data: paymentConfig } = usePaymentConfig();
+  const usesStripe = paymentConfig?.provider === 'stripe' && !!paymentConfig.publishableKey;
+  // Set once the order exists (stock reserved, prices locked) and Stripe has a PaymentIntent for it.
+  const [awaitingCard, setAwaitingCard] = useState<{ orderId: string; clientSecret: string; totalCents: number } | null>(null);
   const [address, setAddress] = useState<Address>(EMPTY_ADDRESS);
   const [outcome, setOutcome] = useState<'succeeded' | 'failed'>('succeeded');
   const [error, setError] = useState<string | null>(null);
@@ -38,15 +43,21 @@ function Checkout() {
     setError(null);
     setPlacing(true);
     try {
-      const { order } = await api<{ order: Order; payment: PaymentInfo }>('/orders', {
+      const { order, payment } = await api<{ order: Order; payment: PaymentInfo }>('/orders', {
         method: 'POST',
         headers: { 'Idempotency-Key': idempotencyKey },
         body: { shippingAddress: address },
       });
-      // Stands in for the provider's payment page: the API turns this into a signed webhook.
-      await api(`/orders/${order.id}/mock-pay`, { method: 'POST', body: { outcome } }).catch(() => undefined);
       await queryClient.invalidateQueries({ queryKey: ['cart'] });
       await queryClient.invalidateQueries({ queryKey: ['orders'] });
+      if (usesStripe && payment.clientSecret) {
+        // Step 2: card entry in Stripe's form. The order is already reserved, so stock can't vanish mid-payment.
+        setAwaitingCard({ orderId: order.id, clientSecret: payment.clientSecret, totalCents: order.totalCents });
+        setPlacing(false);
+        return;
+      }
+      // Mock provider: stands in for the provider's payment page; the API turns this into a signed webhook.
+      await api(`/orders/${order.id}/mock-pay`, { method: 'POST', body: { outcome } }).catch(() => undefined);
       router.push(`/orders/${order.id}?placed=1`);
     } catch (err) {
       setError(errorMessage(err));
@@ -60,6 +71,27 @@ function Checkout() {
       <Input id={key} required value={address[key]} onChange={(e) => setAddress({ ...address, [key]: e.target.value })} {...props} />
     </div>
   );
+
+  if (awaitingCard && paymentConfig?.publishableKey) {
+    return (
+      <div className="mx-auto max-w-xl space-y-4 p-5">
+        <h1 className="text-[28px]">Payment</h1>
+        <Alert tone="info">
+          Your order is reserved: items are held and prices locked. Pay below to confirm it. If you leave, you can finish
+          paying from <Link href={`/orders/${awaitingCard.orderId}`} className="link">the order page</Link>.
+        </Alert>
+        <Card className="rounded-lg">
+          <StripePayment
+            publishableKey={paymentConfig.publishableKey}
+            clientSecret={awaitingCard.clientSecret}
+            orderId={awaitingCard.orderId}
+            amountCents={awaitingCard.totalCents}
+            onPaid={() => router.push(`/orders/${awaitingCard.orderId}?placed=1`)}
+          />
+        </Card>
+      </div>
+    );
+  }
 
   if (cart && cart.items.length === 0 && !placing) {
     return (
@@ -86,15 +118,23 @@ function Checkout() {
         </Card>
         <Card>
           <h2 className="mb-3 text-lg font-bold">2. Payment method</h2>
-          <p className="mb-3 text-xs text-gray-600">Demo mode: payments go through a mock provider that sends a signed webhook back to the API.</p>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="radio" name="pay" checked={outcome === 'succeeded'} onChange={() => setOutcome('succeeded')} />
-            Mock Visa ending in 4242 <span className="text-xs text-gray-500">(payment succeeds)</span>
-          </label>
-          <label className="mt-2 flex items-center gap-2 text-sm">
-            <input type="radio" name="pay" checked={outcome === 'failed'} onChange={() => setOutcome('failed')} />
-            Mock card ending in 0002 <span className="text-xs text-gray-500">(payment is declined, order is cancelled and restocked)</span>
-          </label>
+          {usesStripe ? (
+            <p className="text-sm text-gray-700">
+              Card, via Stripe (test mode). You&apos;ll enter card details securely on the next step, after your items are reserved.
+            </p>
+          ) : (
+            <>
+              <p className="mb-3 text-xs text-gray-600">Demo mode: payments go through a mock provider that sends a signed webhook back to the API.</p>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="radio" name="pay" checked={outcome === 'succeeded'} onChange={() => setOutcome('succeeded')} />
+                Mock Visa ending in 4242 <span className="text-xs text-gray-500">(payment succeeds)</span>
+              </label>
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input type="radio" name="pay" checked={outcome === 'failed'} onChange={() => setOutcome('failed')} />
+                Mock card ending in 0002 <span className="text-xs text-gray-500">(payment is declined, order is cancelled and restocked)</span>
+              </label>
+            </>
+          )}
         </Card>
         <Card>
           <h2 className="mb-3 text-lg font-bold">3. Review items</h2>
@@ -113,7 +153,7 @@ function Checkout() {
 
       <Card className="h-fit lg:mt-14 lg:w-80">
         <Button type="submit" variant="cart" size="full" disabled={placing || !cart?.items.length}>
-          {placing ? 'Placing your order…' : 'Place your order'}
+          {placing ? 'Placing your order…' : usesStripe ? 'Continue to payment' : 'Place your order'}
         </Button>
         <p className="mt-2 text-center text-xs text-gray-600">Prices and stock are re-checked on our side when you place the order.</p>
         <h3 className="mt-4 border-t pt-3 font-bold">Order Summary</h3>

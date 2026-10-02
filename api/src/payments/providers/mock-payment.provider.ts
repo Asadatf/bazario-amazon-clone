@@ -24,6 +24,10 @@ export class MockPaymentProvider implements PaymentProvider {
     return null;
   }
 
+  async cancel(): Promise<void> {
+    // Nothing to cancel: the mock never charges anyone.
+  }
+
   parseWebhook(rawBody: Buffer, signature: string | undefined): PaymentEvent | null {
     this.verify(rawBody, signature);
     const event = JSON.parse(rawBody.toString('utf8')) as Partial<PaymentEvent>;

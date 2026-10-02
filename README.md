@@ -165,11 +165,10 @@ Tests: 48 passed
 
 ## Done vs out of scope
 
-**Done:** everything in the plan's phases 1–7, including seller pages; guest cart with merge on sign-in; typo-tolerant search suggestions; buy again; Stripe provider at API level; admin fulfilment transitions; trigram search fallback; Dockerfile and Render blueprint.
+**Done:** everything in the plan's phases 1–7, including seller pages; **Stripe test-mode payments** (Payment Element + signed webhooks; mock provider for local dev and tests); guest cart with merge on sign-in; typo-tolerant search suggestions; buy again; Stripe provider at API level; admin fulfilment transitions; trigram search fallback; Dockerfile and Render blueprint.
 
 **Out of scope / cut (per the plan's cut order):**
 - Reviews: table and constraint exist, no endpoints/UI (ratings are seeded).
-- Stripe in the UI: no Stripe Elements; the demo checkout uses the mock provider. The Stripe adapter handles PaymentIntents and verified webhooks.
 - Wishlists, recommendations, product variants, image upload, emails.
 - No sweeper yet for abandoned `PENDING_PAYMENT` orders (they'd be expired by the provider's webhook).
 

@@ -28,6 +28,8 @@ export interface PaymentProvider {
   readonly name: string;
   createPayment(input: CreatePaymentInput): Promise<CreatedPayment>;
   clientSecretFor(providerRef: string): Promise<string | null>;
+  /** Best effort: stop the provider from accepting payment for an order we've cancelled. */
+  cancel(providerRef: string): Promise<void>;
   /** Verifies the signature over the exact raw bytes and returns null for event types we don't care about. Throws if the signature is bad. */
   parseWebhook(rawBody: Buffer, signature: string | undefined): PaymentEvent | null;
 }

@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Payment, PaymentStatus, Prisma } from '@prisma/client';
+import { AppConfigService } from '../config/app-config.service';
 import { Db, PrismaService } from '../prisma/prisma.service';
 import { MockPaymentProvider } from './providers/mock-payment.provider';
 import { PAYMENT_PROVIDER, PaymentEvent, PaymentProvider } from './providers/payment-provider';
@@ -28,10 +29,15 @@ export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
   private handler?: PaymentOutcomeHandler;
 
+  private readonly publishableKey: string | null;
+
   constructor(
     private readonly prisma: PrismaService,
     @Inject(PAYMENT_PROVIDER) private readonly provider: PaymentProvider,
-  ) {}
+    config: AppConfigService,
+  ) {
+    this.publishableKey = provider.name === 'stripe' ? (config.get('STRIPE_PUBLISHABLE_KEY') ?? null) : null;
+  }
 
   registerOutcomeHandler(handler: PaymentOutcomeHandler): void {
     this.handler = handler;
@@ -52,9 +58,28 @@ export class PaymentsService {
     return this.toInfo(payment, created.clientSecret);
   }
 
+  /** The client secret is only included while payment is still possible, so the owner can retry. */
   async findForOrder(orderId: string): Promise<PaymentInfo | null> {
     const payment = await this.prisma.payment.findFirst({ where: { orderId }, orderBy: { createdAt: 'desc' } });
-    return payment ? this.toInfo(payment, null) : null;
+    if (!payment) return null;
+    const secret = payment.status === PaymentStatus.PENDING ? await this.provider.clientSecretFor(payment.providerRef) : null;
+    return this.toInfo(payment, secret);
+  }
+
+  /** What the web app needs to render the right payment UI. Nothing secret: the publishable key is public. */
+  publicConfig(): { provider: string; publishableKey: string | null } {
+    return { provider: this.provider.name, publishableKey: this.publishableKey };
+  }
+
+  /** Called after an order is cancelled (outside the transaction), so the provider can't still take the money. */
+  async cancelAtProvider(orderId: string): Promise<void> {
+    const payment = await this.prisma.payment.findFirst({ where: { orderId }, orderBy: { createdAt: 'desc' } });
+    if (!payment) return;
+    try {
+      await this.provider.cancel(payment.providerRef);
+    } catch (err) {
+      this.logger.error(JSON.stringify({ event: 'provider_cancel_failed', orderId, error: err instanceof Error ? err.message : String(err) }));
+    }
   }
 
   /**

@@ -3,7 +3,7 @@
 import { CheckCircle2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { BuyAgain } from '@/components/buy-again';
 import { OrderStatusBadge } from '@/components/order-status';
 import { RequireAuth } from '@/components/require-auth';
@@ -11,13 +11,16 @@ import { Button } from '@/components/ui/button';
 import { Alert, Card } from '@/components/ui/card';
 import { errorMessage } from '@/lib/api';
 import { formatCents } from '@/lib/money';
-import { useOrder, useOrderActions } from '@/lib/queries';
+import { StripePayment } from '@/components/stripe-payment';
+import { useOrder, useOrderActions, usePaymentConfig } from '@/lib/queries';
 
 function OrderDetail() {
   const { id } = useParams<{ id: string }>();
   const justPlaced = useSearchParams().get('placed') === '1';
   const { data: order, isLoading, error } = useOrder(id);
   const { cancel, pay } = useOrderActions(id);
+  const { data: paymentConfig } = usePaymentConfig();
+  const [cardSubmitted, setCardSubmitted] = useState(false);
 
   if (isLoading) return <p className="p-10 text-center text-gray-500">Loading…</p>;
   if (error || !order) return <div className="mx-auto max-w-3xl p-10"><Alert>{error ? errorMessage(error) : 'Order not found'}</Alert></div>;
@@ -44,6 +47,9 @@ function OrderDetail() {
             <p className="text-sm">Your order was cancelled and nothing was charged. Use the button below to put {order.items.length > 1 ? 'these items' : 'this item'} back in your cart and try again.</p>
           </div>
         </Card>
+      )}
+      {order.status === 'PENDING_PAYMENT' && (justPlaced || cardSubmitted) && order.payment?.provider === 'stripe' && (
+        <Alert tone="info">Confirming your payment with Stripe… this page updates automatically.</Alert>
       )}
       {actionError && <Alert>{errorMessage(actionError)}</Alert>}
 
@@ -90,8 +96,21 @@ function OrderDetail() {
           <div className="mt-4 border-t pt-4"><BuyAgain items={order.items} label={order.items.length > 1 ? 'Buy all again' : 'Buy it again'} /></div>
         )}
         {order.status === 'PENDING_PAYMENT' && (
-          <div className="mt-4 flex flex-wrap gap-3 border-t pt-4">
-            <Button onClick={() => pay.mutate('succeeded')} disabled={pay.isPending}>Complete payment (mock)</Button>
+          <div className="mt-4 space-y-4 border-t pt-4">
+            {order.payment?.provider === 'stripe' && order.payment.clientSecret && paymentConfig?.publishableKey ? (
+              <div className="max-w-md">
+                <h3 className="mb-2 font-bold">Complete payment</h3>
+                <StripePayment
+                  publishableKey={paymentConfig.publishableKey}
+                  clientSecret={order.payment.clientSecret}
+                  orderId={order.id}
+                  amountCents={order.totalCents}
+                  onPaid={() => setCardSubmitted(true)}
+                />
+              </div>
+            ) : (
+              <Button onClick={() => pay.mutate('succeeded')} disabled={pay.isPending}>Complete payment (mock)</Button>
+            )}
             <Button variant="danger" onClick={() => cancel.mutate()} disabled={cancel.isPending}>Cancel order</Button>
           </div>
         )}

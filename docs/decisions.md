@@ -159,3 +159,11 @@ Each entry: **Decision**, **Why**, **Alternatives rejected**, **How I'd change i
 
 - **Decision:** Removed the countdown timer, "order soon" copy, the hard-coded "Deliver to" location, false "delivery tomorrow" promises, and dead footer links. Kept "Only N left", because it's true.
 - **Why:** In a store, trust is part of the UX. Every claim on the page should be backed by data the system actually has.
+
+## 25. Stripe test mode in the UI: two-step checkout, webhook as the source of truth
+
+- **Decision:** With `PAYMENT_PROVIDER=stripe`, "Continue to payment" first creates the order (stock reserved, prices locked, PaymentIntent created with an idempotency key), then shows Stripe's **Payment Element**. The browser's `confirmPayment` only *asks* Stripe to charge; the order becomes PAID when Stripe's signed `payment_intent.succeeded` webhook reaches the API. The order page polls while pending. The web app learns the provider and publishable key from `GET /payments/config`, so switching providers is a Render env change only.
+- **Why:** Card data stays inside Stripe's iframe (no PCI scope for us). Reserving stock before payment means the item can't sell out while the customer types their card. Trusting the webhook, not the browser, means a closed tab or a tampered client can't fake a payment.
+- **Change from the mock mapping:** Stripe's `payment_intent.payment_failed` is *ignored*, because a declined card leaves the intent open for another try. Only `payment_intent.canceled` cancels the order and restocks. Cancelling an order also cancels the intent at Stripe (best effort, after commit).
+- **Alternatives rejected:** Stripe Checkout (hosted page): less work, but it leaves the site and the order would be created on return. Charging before creating the order: risks taking money for stock that's gone.
+- **At scale:** Expire abandoned PaymentIntents with a sweeper, add 3-D Secure redirect handling tests, and reconcile against Stripe's events API in case webhooks are missed.

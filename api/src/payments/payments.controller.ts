@@ -1,4 +1,4 @@
-import { Controller, Headers, HttpCode, HttpStatus, Post, RawBodyRequest, Req } from '@nestjs/common';
+import { Controller, Get, Headers, HttpCode, HttpStatus, Post, RawBodyRequest, Req } from '@nestjs/common';
 import { ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import type { Request } from 'express';
@@ -10,6 +10,12 @@ import { PaymentsService } from './payments.service';
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly payments: PaymentsService) {}
+
+  @Public()
+  @Get('config')
+  config() {
+    return this.payments.publicConfig();
+  }
 
   /** Authenticated by signature, not JWT: the caller is the payment provider, not a user. */
   @Public()

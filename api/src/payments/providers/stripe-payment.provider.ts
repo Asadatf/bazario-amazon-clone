@@ -33,6 +33,13 @@ export class StripePaymentProvider implements PaymentProvider {
     return intent.client_secret;
   }
 
+  async cancel(providerRef: string): Promise<void> {
+    const intent = await this.stripe.paymentIntents.retrieve(providerRef);
+    if (intent.status !== 'succeeded' && intent.status !== 'canceled') {
+      await this.stripe.paymentIntents.cancel(providerRef);
+    }
+  }
+
   parseWebhook(rawBody: Buffer, signature: string | undefined): PaymentEvent | null {
     let event: Stripe.Event;
     try {
@@ -40,9 +47,10 @@ export class StripePaymentProvider implements PaymentProvider {
     } catch {
       throw new UnauthorizedException('Invalid webhook signature');
     }
+    // payment_intent.payment_failed is deliberately ignored: with Stripe a declined card leaves the
+    // PaymentIntent open, so the shopper can retry with another card. Only a cancelled intent ends the order.
     const outcome =
       event.type === 'payment_intent.succeeded' ? 'succeeded'
-      : event.type === 'payment_intent.payment_failed' ? 'failed'
       : event.type === 'payment_intent.canceled' ? 'expired'
       : null;
     if (!outcome) return null;

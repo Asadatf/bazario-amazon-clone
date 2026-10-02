@@ -152,6 +152,7 @@ export class OrdersService implements OnModuleInit, PaymentOutcomeHandler {
       return ok;
     });
     if (!cancelled) throw new ConflictException('Only orders awaiting payment can be cancelled');
+    await this.payments.cancelAtProvider(id);
     return this.findVisible(user, id);
   }
 

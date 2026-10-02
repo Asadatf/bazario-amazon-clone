@@ -15,7 +15,8 @@ import { StripePaymentProvider } from './providers/stripe-payment.provider';
       inject: [AppConfigService],
       useFactory: (config: AppConfigService): PaymentProvider =>
         config.get('PAYMENT_PROVIDER') === 'stripe'
-          ? new StripePaymentProvider(config.get('STRIPE_SECRET_KEY') as string, config.get('STRIPE_WEBHOOK_SECRET') as string)
+          ? // Presence is guaranteed by the env schema's refine() when PAYMENT_PROVIDER=stripe.
+            new StripePaymentProvider(config.get('STRIPE_SECRET_KEY') as string, config.get('STRIPE_WEBHOOK_SECRET') as string)
           : new MockPaymentProvider(config.get('MOCK_WEBHOOK_SECRET')),
     },
   ],

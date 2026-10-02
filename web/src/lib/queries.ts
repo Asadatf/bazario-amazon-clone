@@ -90,6 +90,15 @@ export const useRemoveCartItem = () =>
     (productId) => guestCart.remove(productId),
   );
 
+export interface PaymentConfig {
+  provider: 'mock' | 'stripe';
+  publishableKey: string | null;
+}
+
+/** Which payment UI to render. Changes only on redeploy, so fetch once per session. */
+export const usePaymentConfig = () =>
+  useQuery({ queryKey: ['payment-config'], queryFn: () => api<PaymentConfig>('/payments/config'), staleTime: Infinity });
+
 export const useSuggestions = (q: string) =>
   useQuery({
     queryKey: ['suggest', q],
@@ -121,7 +130,13 @@ export const useOrders = () => {
 
 export const useOrder = (id: string) => {
   const { status } = useAuth();
-  return useQuery({ queryKey: ['order', id], queryFn: () => api<Order>(`/orders/${id}`), enabled: status === 'authenticated' });
+  return useQuery({
+    queryKey: ['order', id],
+    queryFn: () => api<Order>(`/orders/${id}`),
+    enabled: status === 'authenticated',
+    // The webhook that marks an order PAID arrives a moment after the card is confirmed: poll until it lands.
+    refetchInterval: (query) => (query.state.data?.status === 'PENDING_PAYMENT' ? 2000 : false),
+  });
 };
 
 export function useOrderActions(id: string) {

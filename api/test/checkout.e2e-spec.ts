@@ -173,6 +173,13 @@ describe('Cart + checkout + payments (e2e)', () => {
     });
   });
 
+  describe('payment config', () => {
+    it('tells the web app which provider is active, with no secrets', async () => {
+      const res = await api().get('/api/v1/payments/config').expect(200);
+      expect(res.body).toEqual({ provider: 'mock', publishableKey: null });
+    });
+  });
+
   describe('guest cart', () => {
     it('quotes a signed-out cart with server prices, ignoring unknown products and summing duplicates', async () => {
       const product = await createProduct(prisma, sellerId, { priceCents: 1250, stock: 5 });
