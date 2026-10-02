@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { BuyAgain } from '@/components/buy-again';
 import { OrderStatusBadge } from '@/components/order-status';
 import { RequireAuth } from '@/components/require-auth';
 import { Button } from '@/components/ui/button';
@@ -40,7 +41,7 @@ function OrderDetail() {
           <XCircle className="mt-0.5 h-6 w-6 text-deal" />
           <div>
             <h1 className="text-lg font-bold text-deal">Payment declined</h1>
-            <p className="text-sm">Your order was cancelled and the items were returned to stock. You can try again from your cart.</p>
+            <p className="text-sm">Your order was cancelled and nothing was charged. Use &quot;Buy all again&quot; below to put these items back in your cart.</p>
           </div>
         </Card>
       )}
@@ -85,6 +86,9 @@ function OrderDetail() {
             </li>
           ))}
         </ul>
+        {order.status !== 'PENDING_PAYMENT' && (
+          <div className="mt-4 border-t pt-4"><BuyAgain items={order.items} label={order.items.length > 1 ? 'Buy all again' : 'Buy it again'} /></div>
+        )}
         {order.status === 'PENDING_PAYMENT' && (
           <div className="mt-4 flex flex-wrap gap-3 border-t pt-4">
             <Button onClick={() => pay.mutate('succeeded')} disabled={pay.isPending}>Complete payment (mock)</Button>

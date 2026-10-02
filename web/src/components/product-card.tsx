@@ -19,7 +19,7 @@ export function ProductCard({ product }: { product: ProductListItem }) {
         ) : product.stock < 10 ? (
           <span className="text-deal">Only {product.stock} left in stock</span>
         ) : (
-          <>FREE delivery <b>Tomorrow</b></>
+          <>In stock · Free shipping</>
         )}
       </p>
     </Link>

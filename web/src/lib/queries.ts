@@ -3,6 +3,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './api';
 import { useAuth } from './auth';
+import { guestCart, useGuestCart } from './guest-cart';
 import type { Address, Cart, CategoryNode, Order, Page, PaymentInfo, Product, ProductListItem, SortOption } from './types';
 
 export interface ProductFilters {
@@ -36,26 +37,67 @@ export const useProduct = (id: string) => useQuery({ queryKey: ['product', id], 
 
 const EMPTY_CART: Cart = { items: [], itemCount: 0, subtotalCents: 0 };
 
+/**
+ * One cart API for the UI whether or not the shopper is signed in. Signed in: the server cart. Signed out: the
+ * browser-held guest cart, priced by the server, so the numbers shown are always the server's numbers.
+ */
 export function useCart() {
   const { status } = useAuth();
-  const query = useQuery({ queryKey: ['cart'], queryFn: () => api<Cart>('/cart'), enabled: status === 'authenticated' });
-  return { ...query, data: status === 'authenticated' ? query.data : EMPTY_CART };
+  const guestLines = useGuestCart();
+  const signedIn = status === 'authenticated';
+  const server = useQuery({ queryKey: ['cart'], queryFn: () => api<Cart>('/cart'), enabled: signedIn });
+  const guest = useQuery({
+    queryKey: ['guest-cart', guestLines],
+    queryFn: () => api<Cart>('/cart/quote', { method: 'POST', body: { items: guestLines } }),
+    enabled: status === 'anonymous' && guestLines.length > 0,
+    placeholderData: (previous) => previous,
+  });
+  if (signedIn) return server;
+  if (status === 'anonymous' && guestLines.length === 0) return { ...guest, data: EMPTY_CART, isLoading: false };
+  return guest;
 }
 
-/** Cart mutations return the new cart; writing it straight into the cache avoids a refetch. */
-function useCartMutation<V>(fn: (vars: V) => Promise<Cart>) {
+/** Signed in: the API returns the new cart, written straight into the cache. Signed out: update the guest cart. */
+function useCartMutation<V>(serverFn: (vars: V) => Promise<Cart>, guestFn: (vars: V) => void) {
   const qc = useQueryClient();
-  return useMutation({ mutationFn: fn, onSuccess: (cart) => qc.setQueryData(['cart'], cart) });
+  const { status } = useAuth();
+  return useMutation({
+    mutationFn: async (vars: V) => {
+      if (status === 'authenticated') return serverFn(vars);
+      guestFn(vars);
+      return null;
+    },
+    onSuccess: (cart) => {
+      if (cart) qc.setQueryData(['cart'], cart);
+    },
+  });
 }
 
 export const useAddToCart = () =>
-  useCartMutation((v: { productId: string; quantity: number }) => api<Cart>('/cart/items', { method: 'POST', body: v }));
+  useCartMutation(
+    (v: { productId: string; quantity: number }) => api<Cart>('/cart/items', { method: 'POST', body: v }),
+    (v) => guestCart.add(v.productId, v.quantity),
+  );
 export const useUpdateCartItem = () =>
-  useCartMutation((v: { productId: string; quantity: number }) =>
-    api<Cart>(`/cart/items/${v.productId}`, { method: 'PATCH', body: { quantity: v.quantity } }),
+  useCartMutation(
+    (v: { productId: string; quantity: number }) =>
+      api<Cart>(`/cart/items/${v.productId}`, { method: 'PATCH', body: { quantity: v.quantity } }),
+    (v) => guestCart.set(v.productId, v.quantity),
   );
 export const useRemoveCartItem = () =>
-  useCartMutation((productId: string) => api<Cart>(`/cart/items/${productId}`, { method: 'DELETE' }));
+  useCartMutation(
+    (productId: string) => api<Cart>(`/cart/items/${productId}`, { method: 'DELETE' }),
+    (productId) => guestCart.remove(productId),
+  );
+
+export const useSuggestions = (q: string) =>
+  useQuery({
+    queryKey: ['suggest', q],
+    queryFn: () => api<Pick<Product, 'id' | 'title' | 'imageUrl' | 'priceCents'>[]>(`/search/suggestions?${toQueryString({ q })}`),
+    enabled: q.length >= 2,
+    staleTime: 60_000,
+    placeholderData: (previous) => previous,
+  });
 
 export const useAddresses = () => {
   const { status } = useAuth();

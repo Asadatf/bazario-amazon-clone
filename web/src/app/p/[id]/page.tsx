@@ -1,6 +1,6 @@
 'use client';
 
-import { Lock, MapPin } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -9,13 +9,11 @@ import { Stars } from '@/components/stars';
 import { Button } from '@/components/ui/button';
 import { Alert, Skeleton } from '@/components/ui/card';
 import { errorMessage } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
 import { useAddToCart, useCategories, useProduct } from '@/lib/queries';
 
 export default function ProductPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { status } = useAuth();
   const { data: product, isLoading, error } = useProduct(id);
   const { data: categories } = useCategories();
   const addToCart = useAddToCart();
@@ -38,11 +36,8 @@ export default function ProductPage() {
   const inStock = product.stock > 0;
   const maxQty = Math.min(product.stock, 30);
 
+  // No sign-in wall here: guests get a browser-held cart that merges into their account at checkout.
   const add = async (thenCheckout: boolean) => {
-    if (status !== 'authenticated') {
-      router.push(`/login?next=${encodeURIComponent(`/p/${id}`)}`);
-      return;
-    }
     await addToCart.mutateAsync({ productId: product.id, quantity: qty });
     if (thenCheckout) router.push('/checkout');
     else setAdded(true);
@@ -61,11 +56,11 @@ export default function ProductPage() {
 
         <div>
           <h1 className="text-2xl leading-tight font-normal">{product.title}</h1>
-          {product.sellerName && <p className="mt-1 text-sm"><span className="link">Visit the {product.sellerName} Store</span></p>}
+          {product.sellerName && <p className="mt-1 text-sm text-gray-600">Sold by {product.sellerName}</p>}
           <div className="mt-1"><Stars rating={product.ratingAvg} count={product.ratingCount} /></div>
           <hr className="my-3 border-gray-200" />
           <Price cents={product.priceCents} size="lg" />
-          <p className="mt-1 text-sm text-gray-600">Prices are in USD. Free returns within 30 days.</p>
+          <p className="mt-1 text-sm text-gray-600">Price in USD, free shipping included.</p>
           <hr className="my-3 border-gray-200" />
           <h2 className="mb-1 font-bold">About this item</h2>
           <p className="text-sm leading-relaxed">{product.description}</p>
@@ -73,10 +68,9 @@ export default function ProductPage() {
 
         <aside className="h-fit rounded-lg border border-[#d5d9d9] p-4">
           <Price cents={product.priceCents} />
-          <p className="mt-2 text-sm">FREE delivery <b>Tomorrow</b>. Order within <span className="text-instock">4 hrs 12 mins</span></p>
-          <p className="mt-2 flex items-center gap-1 text-xs link"><MapPin className="h-3.5 w-3.5" /> Deliver to Seattle 98101</p>
+          <p className="mt-2 text-sm">Free shipping. The price you see is the price you pay: no fees added at checkout.</p>
           <p className={`mt-3 text-lg ${inStock ? 'text-instock' : 'text-deal'}`}>
-            {inStock ? (product.stock < 10 ? `Only ${product.stock} left in stock - order soon.` : 'In Stock') : 'Currently unavailable.'}
+            {inStock ? (product.stock < 10 ? `Only ${product.stock} left in stock` : 'In Stock') : 'Currently unavailable.'}
           </p>
           {inStock && (
             <>
@@ -107,7 +101,7 @@ export default function ProductPage() {
           <p className="mt-4 flex items-center gap-1 text-xs text-gray-600"><Lock className="h-3 w-3" /> Secure transaction</p>
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-gray-600">
             <dt>Ships from</dt><dd>Bazario</dd>
-            <dt>Sold by</dt><dd className="link">{product.sellerName ?? 'Bazario'}</dd>
+            <dt>Sold by</dt><dd>{product.sellerName ?? 'Bazario'}</dd>
           </dl>
         </aside>
       </div>

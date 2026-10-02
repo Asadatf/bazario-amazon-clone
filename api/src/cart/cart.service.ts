@@ -8,6 +8,12 @@ export interface CartLine {
   quantity: number;
 }
 
+function sumDuplicates(lines: CartLine[]): CartLine[] {
+  const totals = new Map<string, number>();
+  for (const l of lines) totals.set(l.productId, (totals.get(l.productId) ?? 0) + l.quantity);
+  return [...totals].map(([productId, quantity]) => ({ productId, quantity }));
+}
+
 export interface CartView {
   items: {
     productId: string;
@@ -31,7 +37,44 @@ export class CartService {
 
   /** Prices come from the catalog at read time: the cart stores only "what" and "how many", never "how much". */
   async getCart(userId: string): Promise<CartView> {
-    const lines = await this.getLines(userId);
+    return this.price(await this.getLines(userId));
+  }
+
+  /**
+   * Prices a signed-out shopper's cart (held in their browser) with the same server-side logic as a real cart.
+   * Unknown products are dropped and duplicate lines summed, so a tampered or stale guest cart can't break the page.
+   */
+  async quote(lines: CartLine[]): Promise<CartView> {
+    return this.price(sumDuplicates(lines));
+  }
+
+  /**
+   * On sign-in, folds the guest cart into the account cart. Quantities are clamped to stock and the per-line
+   * cap instead of failing: the shopper shouldn't lose their whole cart because one item sold out meanwhile.
+   */
+  async merge(userId: string, guestLines: CartLine[]): Promise<CartView> {
+    const lines = sumDuplicates(guestLines);
+    if (!lines.length) return this.getCart(userId);
+    const cartId = await this.ensureCart(userId);
+    const products = await this.catalog.findSnapshots(lines.map((l) => l.productId));
+    const existing = new Map((await this.getLines(userId)).map((l) => [l.productId, l.quantity]));
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const line of lines) {
+        const product = products.get(line.productId);
+        if (!product || product.stock === 0) continue;
+        const quantity = Math.min((existing.get(line.productId) ?? 0) + line.quantity, product.stock, MAX_LINE_QUANTITY);
+        await tx.cartItem.upsert({
+          where: { cartId_productId: { cartId, productId: line.productId } },
+          create: { cartId, productId: line.productId, quantity },
+          update: { quantity },
+        });
+      }
+    });
+    return this.getCart(userId);
+  }
+
+  private async price(lines: CartLine[]): Promise<CartView> {
     const products = await this.catalog.findSnapshots(lines.map((l) => l.productId));
     const items = lines
       .filter((l) => products.has(l.productId))

@@ -18,7 +18,7 @@ export function Stars({ rating, count, size = 16 }: { rating: number; count?: nu
           );
         })}
       </div>
-      {count !== undefined && <span className="link">({count.toLocaleString('en-US')})</span>}
+      {count !== undefined && <span className="text-gray-600">({count.toLocaleString('en-US')})</span>}
     </div>
   );
 }

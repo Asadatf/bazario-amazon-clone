@@ -131,6 +131,15 @@ describe('Catalog + search (e2e)', () => {
       expect(page2.body.nextCursor).toBeNull();
     });
 
+    it('suggests products as you type, with the same typo tolerance as search', async () => {
+      const res = await api().get('/api/v1/search/suggestions?q=lapt').expect(200);
+      expect(res.body.length).toBeGreaterThan(0);
+      expect(Object.keys(res.body[0]).sort()).toEqual(['id', 'imageUrl', 'priceCents', 'title']);
+      const typo = await api().get('/api/v1/search/suggestions?q=lptop').expect(200);
+      expect(typo.body.map((p: { title: string }) => p.title)).toContain('Budget Laptop');
+      await api().get('/api/v1/search/suggestions?q=a').expect(400);
+    });
+
     it('caps limit at 50 and rejects tampered cursors', async () => {
       await api().get('/api/v1/products?limit=500').expect(200);
       await api().get('/api/v1/products?cursor=garbage').expect(400);

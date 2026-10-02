@@ -86,6 +86,12 @@ export class SearchService {
     const page = toPage(rows, size, (last) => encodeCursor({ k: serializeKey(last.sortKey), id: last.id }));
     return { items: page.items.map(({ sortKey: _k, ...item }) => item), nextCursor: page.nextCursor };
   }
+
+  /** Same matching and ranking as full search, so a suggestion never disagrees with the results page. */
+  async suggest(q: string): Promise<Pick<ProductListItem, 'id' | 'title' | 'imageUrl' | 'priceCents'>[]> {
+    const { items } = await this.search({ q, sort: 'relevance', limit: 6 });
+    return items.map(({ id, title, imageUrl, priceCents }) => ({ id, title, imageUrl, priceCents }));
+  }
 }
 
 /** Word match (stemmed full-text) OR title substring OR fuzzy title match (typos). */

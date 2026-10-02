@@ -3,7 +3,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api, onSessionChange, refreshSession, setSession } from './api';
-import type { AuthResponse, User } from './types';
+import { guestCart } from './guest-cart';
+import type { AuthResponse, Cart, User } from './types';
 
 type Status = 'loading' | 'authenticated' | 'anonymous';
 
@@ -22,26 +23,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<Status>('loading');
   const queryClient = useQueryClient();
 
+  /** Moves anything added while signed out into the account cart, so signing in never empties the cart. */
+  const mergeGuestCart = useCallback(async () => {
+    const items = guestCart.read();
+    if (!items.length) return;
+    try {
+      const cart = await api<Cart>('/cart/merge', { method: 'POST', body: { items } });
+      queryClient.setQueryData(['cart'], cart);
+      guestCart.clear();
+    } catch {
+      // keep the guest cart; the next sign-in or page load retries the merge
+    }
+  }, [queryClient]);
+
+  const startSession = useCallback(
+    async (session: AuthResponse) => {
+      setSession(session);
+      // Awaited so a redirect to /checkout right after login already sees the merged cart.
+      await mergeGuestCart();
+      void queryClient.invalidateQueries();
+      return session.user;
+    },
+    [queryClient, mergeGuestCart],
+  );
+
   useEffect(() => {
     const unsubscribe = onSessionChange((session) => {
       setUser(session?.user ?? null);
       setStatus(session ? 'authenticated' : 'anonymous');
     });
     // Restore the session after a page load using the httpOnly refresh cookie.
-    void refreshSession();
+    void refreshSession().then((session) => (session ? mergeGuestCart() : undefined));
     return () => {
       unsubscribe();
     };
-  }, []);
-
-  const startSession = useCallback(
-    (session: AuthResponse) => {
-      setSession(session);
-      void queryClient.invalidateQueries();
-      return session.user;
-    },
-    [queryClient],
-  );
+  }, [mergeGuestCart]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

@@ -14,10 +14,10 @@ export default function HomePage() {
     <div className="relative mx-auto max-w-[1500px]">
       <div className="h-[260px] bg-gradient-to-b from-[#3b7fa8] via-[#86b9d6] to-page sm:h-[320px]">
         <div className="mx-auto max-w-5xl px-6 pt-10 text-white sm:pt-14">
-          <p className="text-sm font-semibold tracking-wide uppercase opacity-90">Fall Deals Week</p>
-          <h1 className="mt-1 text-3xl font-extrabold drop-shadow sm:text-5xl">Everything you need, delivered tomorrow.</h1>
-          <Link href="/s?sort=price_asc" className="mt-4 inline-block rounded-full bg-cart-btn px-5 py-2 text-sm font-medium text-black hover:bg-cart-btn-hover">
-            Shop deals
+          <p className="text-sm font-semibold tracking-wide uppercase opacity-90">No sponsored results. No fake timers.</p>
+          <h1 className="mt-1 text-3xl font-extrabold drop-shadow sm:text-5xl">Find it fast, see the real price, check out on one page.</h1>
+          <Link href="/s?sort=rating" className="mt-4 inline-block rounded-full bg-cart-btn px-5 py-2 text-sm font-medium text-black hover:bg-cart-btn-hover">
+            Shop top rated
           </Link>
         </div>
       </div>

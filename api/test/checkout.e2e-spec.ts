@@ -173,6 +173,39 @@ describe('Cart + checkout + payments (e2e)', () => {
     });
   });
 
+  describe('guest cart', () => {
+    it('quotes a signed-out cart with server prices, ignoring unknown products and summing duplicates', async () => {
+      const product = await createProduct(prisma, sellerId, { priceCents: 1250, stock: 5 });
+      const res = await api()
+        .post('/api/v1/cart/quote')
+        .send({ items: [{ productId: product.id, quantity: 1 }, { productId: product.id, quantity: 2 }, { productId: randomUUID(), quantity: 1 }] })
+        .expect(200);
+      expect(res.body).toMatchObject({ itemCount: 3, subtotalCents: 3750 });
+      expect(res.body.items).toHaveLength(1);
+    });
+
+    it('rejects client-supplied prices in a guest cart', async () => {
+      const product = await createProduct(prisma, sellerId);
+      await api().post('/api/v1/cart/quote').send({ items: [{ productId: product.id, quantity: 1, priceCents: 1 }] }).expect(400);
+    });
+
+    it('merges into the account cart on sign-in, clamping to stock and skipping sold-out items', async () => {
+      const kept = await createProduct(prisma, sellerId, { stock: 4 });
+      const soldOut = await createProduct(prisma, sellerId, { stock: 0 });
+      const buyer = await createUser(app, prisma);
+      await addToCart(buyer, kept.id, 1).expect(201);
+
+      const res = await api()
+        .post('/api/v1/cart/merge')
+        .set(auth(buyer.token))
+        .send({ items: [{ productId: kept.id, quantity: 10 }, { productId: soldOut.id, quantity: 1 }] })
+        .expect(200);
+
+      expect(res.body.items).toEqual([expect.objectContaining({ productId: kept.id, quantity: 4 })]);
+      await api().post('/api/v1/cart/merge').send({ items: [] }).expect(401);
+    });
+  });
+
   describe('payments + order lifecycle', () => {
     let buyer: TestUser;
     let productId: string;

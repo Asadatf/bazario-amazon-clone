@@ -1,13 +1,13 @@
 'use client';
 
-import { ChevronDown, MapPin, Menu, Search, ShoppingCart } from 'lucide-react';
+import { ChevronDown, Menu, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useCart, useCategories } from '@/lib/queries';
 import { useHydrated } from '@/lib/use-hydrated';
 import { Logo } from './logo';
+import { SearchBox } from './search-box';
 
 export function Header() {
   const auth = useAuth();
@@ -19,22 +19,6 @@ export function Header() {
   const cart = hydrated ? liveCart : undefined;
   const { data: categories } = useCategories();
   const router = useRouter();
-  const params = useSearchParams();
-  const [q, setQ] = useState(params.get('q') ?? '');
-  const [category, setCategory] = useState(params.get('category') ?? '');
-
-  useEffect(() => {
-    setQ(params.get('q') ?? '');
-    setCategory(params.get('category') ?? '');
-  }, [params]);
-
-  const onSearch = (e: FormEvent) => {
-    e.preventDefault();
-    const qs = new URLSearchParams();
-    if (q.trim()) qs.set('q', q.trim());
-    if (category) qs.set('category', category);
-    router.push(`/s?${qs.toString()}`);
-  };
 
   const firstName = user?.name.split(' ')[0];
 
@@ -43,39 +27,7 @@ export function Header() {
       <div className="flex h-[60px] items-center gap-2 bg-nav px-2 text-white">
         <Logo />
 
-        <div className="hidden items-end rounded border border-transparent px-2 py-1 hover:border-white lg:flex">
-          <MapPin className="mb-0.5 h-4 w-4" />
-          <div className="leading-tight">
-            <div className="text-xs text-gray-300">Deliver to {firstName ?? 'you'}</div>
-            <div className="text-sm font-bold">Seattle 98101</div>
-          </div>
-        </div>
-
-        <form onSubmit={onSearch} className="flex h-10 flex-1 overflow-hidden rounded-md focus-within:ring-3 focus-within:ring-brand" role="search">
-          <select
-            aria-label="Search in category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="hidden max-w-40 cursor-pointer border-r border-gray-300 bg-[#e6e6e6] px-2 text-xs text-gray-700 hover:bg-[#d4d4d4] sm:block"
-          >
-            <option value="">All</option>
-            {categories?.map((c) => (
-              <option key={c.slug} value={c.slug}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search Bazario"
-            aria-label="Search"
-            className="min-w-0 flex-1 bg-white px-3 text-[15px] text-black outline-none"
-          />
-          <button type="submit" aria-label="Go" className="flex w-12 items-center justify-center bg-brand text-nav hover:bg-brand-dark">
-            <Search className="h-5 w-5" />
-          </button>
-        </form>
+        <SearchBox />
 
         <div className="group relative">
           <Link

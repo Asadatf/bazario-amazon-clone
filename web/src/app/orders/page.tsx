@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { BuyAgain } from '@/components/buy-again';
 import { OrderStatusBadge } from '@/components/order-status';
 import { RequireAuth } from '@/components/require-auth';
 import { Button } from '@/components/ui/button';
@@ -28,14 +29,18 @@ function Orders() {
               <div className="ml-auto text-right"><div className="uppercase">Order # {o.id.slice(0, 8)}</div><Link className="link text-sm" href={`/orders/${o.id}`}>View order details</Link></div>
             </div>
             <div className="px-5 py-4">
-              <OrderStatusBadge status={o.status} />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <OrderStatusBadge status={o.status} />
+                {o.items.length > 1 && <BuyAgain items={o.items} label="Buy all again" />}
+              </div>
               <ul className="mt-3 space-y-3">
                 {o.items.map((i) => (
                   <li key={i.id} className="flex items-center gap-4">
                     <img src={i.imageUrl} alt="" className="h-20 w-20 object-contain" />
-                    <div className="text-sm">
+                    <div className="flex-1 space-y-1 text-sm">
                       {i.productId ? <Link className="link" href={`/p/${i.productId}`}>{i.title}</Link> : i.title}
                       <div className="text-xs text-gray-600">Qty {i.quantity} · {formatCents(i.unitPriceCents)} each</div>
+                      <BuyAgain items={[i]} />
                     </div>
                   </li>
                 ))}

@@ -16,21 +16,6 @@ export default function CartPage() {
   const remove = useRemoveCartItem();
   const error = update.error ?? remove.error;
 
-  if (status === 'anonymous') {
-    return (
-      <div className="mx-auto max-w-5xl p-6">
-        <Card>
-          <h1 className="text-2xl font-bold">Your Bazario Cart is empty</h1>
-          <p className="mt-2 text-sm">Sign in to see the items you added.</p>
-          <div className="mt-4 flex gap-3">
-            <Button asChild><Link href="/login?next=/cart">Sign in to your account</Link></Button>
-            <Button asChild variant="outline"><Link href="/register">Sign up now</Link></Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
   const items = cart?.items ?? [];
   return (
     <div className="mx-auto flex max-w-[1500px] flex-col gap-5 p-5 lg:flex-row">
@@ -38,6 +23,11 @@ export default function CartPage() {
         <h1 className="text-[28px] font-normal">Shopping Cart</h1>
         <p className="border-b pb-1 text-right text-sm text-gray-600">Price</p>
         {error && <div className="my-3"><Alert>{errorMessage(error)}</Alert></div>}
+        {status === 'anonymous' && items.length > 0 && (
+          <p className="mt-2 text-sm text-gray-600">
+            You&apos;re shopping as a guest. Your cart is saved in this browser and moves to your account when you sign in at checkout.
+          </p>
+        )}
         {isLoading || status === 'loading' ? (
           <p className="py-10 text-center text-gray-500">Loading…</p>
         ) : items.length === 0 ? (
@@ -95,6 +85,7 @@ export default function CartPage() {
             Subtotal ({cart?.itemCount} items): <b>{formatCents(cart?.subtotalCents ?? 0)}</b>
           </p>
           <Button asChild size="full" className="mt-4"><Link href="/checkout">Proceed to checkout</Link></Button>
+          {status === 'anonymous' && <p className="mt-2 text-center text-xs text-gray-600">You&apos;ll sign in or create an account next.</p>}
         </Card>
       )}
     </div>
