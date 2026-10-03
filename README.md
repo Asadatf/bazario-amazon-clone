@@ -13,6 +13,7 @@ It uses an original name and logo ("bazario." with its own arc), not Amazon's br
 |---|---|
 | **Live site** (Vercel) | **https://bazario-amazon-clone.vercel.app** |
 | API (Render) | https://bazario-amazon-clone.onrender.com/api/v1/health |
+| **Walkthrough video** (Loom) | https://www.loom.com/share/907465df06f9439ca2646e428d104312 |
 | API docs (Swagger) | https://bazario-amazon-clone.onrender.com/docs |
 | Repository | https://github.com/Asadatf/bazario-amazon-clone |
 
